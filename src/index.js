@@ -2,37 +2,32 @@
 
 const Hapi = require('@hapi/hapi');
 const uuid4 = require('uuid/v4');
-const { Issuer, generators } = require('openid-client');
+const { Issuer } = require('openid-client');
 const scheme = require('./scheme');
-
-const oidcConfig = {
-    callbackUrl: "http://localhost:3000/signin",
-    clientId: "",
-    responseTypes: ["id_token"],
-    scopes: "openid profile",
-    discoveryUrl: "<b2c policy discovery uri>"
-};
-const cookieName = "oidc";
+const config = require('../env/config');
 
 const init = async () => {
     const server = Hapi.server({
-        port: 3000,
-        host: 'localhost'
+        port: config.Server.Port,
+        host: config.Server.Name
     });
 
     // configure oidc provider & infra
-    const issuer = await Issuer.discover(oidcConfig.discoveryUrl);
+    const issuer = await Issuer.discover(config.OpenIdConfiguration.DiscoveryUrl);
     console.log('Discovered issuer %s %O', issuer.issuer, issuer.metadata);
 
     const client = new issuer.Client({
-        client_id: oidcConfig.clientId,
-        redirect_uri: oidcConfig.callbackUrl,
-        response_types: oidcConfig.responseTypes,
+        client_id: config.OpenIdConfiguration.ClientId,
+        redirect_uri: config.OpenIdConfiguration.CallbackUrl,
+        response_types: config.OpenIdConfiguration.ResponseTypes,
     });
 
     // configure hapi authentication scheme
     server.auth.scheme('oidc', scheme({
-        cookieName, callbackUrl: oidcConfig.callbackUrl, scope: oidcConfig.scopes, client
+        cookieName: config.OpenIdConfiguration.StateCookieName,
+        callbackUrl: config.OpenIdConfiguration.CallbackUrl,
+        scopes: config.OpenIdConfiguration.Scopes,
+        client
     }));
 
     // configure hapi auth strategy
@@ -73,7 +68,7 @@ const init = async () => {
         method: "GET",
         path: "/signin",
         handler: (request, h) => {
-            return "<div>sign in!</div>";
+            return "<div>sign in! <a href='/me'>go</a></div>";
         },
         options: {
             auth: false
@@ -90,10 +85,10 @@ const init = async () => {
                 const nonce = request.state.oidc.nonce;
                 h.request.raw.req.body = request.payload; // input object to callbackParams needs to match http.incomingMessage signature
                 const params = client.callbackParams(h.request.raw.req);
-                const tokenSet = await client.callback(oidcConfig.callbackUrl, params, { state, nonce });
+                const tokenSet = await client.callback(config.OpenIdConfiguration.CallbackUrl, params, { state, nonce });
                 console.log('received and validated tokens %j', tokenSet);
                 console.log('validated ID Token claims %j', tokenSet.claims());
-                h.state(cookieName, { credentials: tokenSet, artifacts: tokenSet.claims() });
+                h.state(config.OpenIdConfiguration.StateCookieName, { credentials: tokenSet, artifacts: tokenSet.claims() });
                 return h.redirect("/me");
             } catch (err) {
                 request.log(['error', 'auth'], err.error_description);

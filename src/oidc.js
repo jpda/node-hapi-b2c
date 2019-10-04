@@ -7,7 +7,7 @@ const { Issuer, generators } = require('openid-client');
 const Hoek = require('@hapi/hoek');
 
 const pkg = require('../package.json');
-const scheme = require('./scheme');
+const scheme = require('./scheme').default;
 
 const MANUAL_SETTINGS = ['issuer', 'authorization', 'token', 'userinfo', 'jwks'];
 const PLUGIN_DEFAULTS = {
