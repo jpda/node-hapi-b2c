@@ -6,8 +6,8 @@ const { Issuer, generators } = require('openid-client');
 const scheme = require('./scheme');
 
 const oidcConfig = {
-    callbackUrl: "<redirect_uri>",
-    clientId: "<client_id>",
+    callbackUrl: "http://localhost:3000/signin",
+    clientId: "",
     responseTypes: ["id_token"],
     scopes: "openid profile",
     discoveryUrl: "<b2c policy discovery uri>"
@@ -43,15 +43,29 @@ const init = async () => {
     // sets oidc strategy as default
     server.auth.default("oidc");
 
-    // protected endpoint, noted by absence of 'options:auth' object
+    // unprotected splash page endpoint
     server.route([{
         method: 'GET',
         path: '/',
         handler: (request, h) => {
-            if (request.auth.isAuthenticated) {
+            if (request.auth.isAuthenticated) { // this should always be true
+                return h.redirect("/me");
+            }
+            return "Hello! Let's get <a href='/signin'>signed in</a>.";
+        },
+        options: {
+            auth: false
+        }
+    },
+    // protected endpoint, noted by absence of 'options:auth' object
+    {
+        method: 'GET',
+        path: '/me',
+        handler: (request, h) => {
+            if (request.auth.isAuthenticated) { // this should always be true
                 return "Hello " + JSON.stringify(request.auth.artifacts);
             }
-            return h.redirect("/signin");
+            return h.redirect("/");
         }
     },
     // unprotected endpoint for login, note 'options:auth:false'
@@ -59,14 +73,14 @@ const init = async () => {
         method: "GET",
         path: "/signin",
         handler: (request, h) => {
-
             return "<div>sign in!</div>";
         },
         options: {
             auth: false
         }
     },
-    // callback from oidc provider. parses cookie data for state/nonce to ensure they match, sets auth data in hapi pipeline and redirects home
+    // callback from oidc provider. parses cookie data for state/nonce to ensure they match
+    // leaves token validation to openid-client, sets auth data in hapi pipeline and redirects home
     {
         method: 'POST',
         path: "/signin",
@@ -80,7 +94,7 @@ const init = async () => {
                 console.log('received and validated tokens %j', tokenSet);
                 console.log('validated ID Token claims %j', tokenSet.claims());
                 h.state(cookieName, { credentials: tokenSet, artifacts: tokenSet.claims() });
-                return h.redirect("/");
+                return h.redirect("/me");
             } catch (err) {
                 request.log(['error', 'auth'], err.error_description);
                 throw err;
