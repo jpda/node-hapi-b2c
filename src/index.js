@@ -58,7 +58,10 @@ const init = async () => {
         path: '/me',
         handler: (request, h) => {
             if (request.auth.isAuthenticated) { // this should always be true
-                return "Hello " + JSON.stringify(request.auth.artifacts);
+                var rows = Object.keys(request.auth.artifacts).map((x, i) => {
+                    return "<tr key=" + i + "><td>" + x + "</td><td>" + request.auth.artifacts[x] + "</td></tr>";
+                });
+                return "<h2>hello</h2><table>" + rows + "</table>";
             }
             return h.redirect("/");
         }
