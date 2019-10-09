@@ -101,6 +101,18 @@ const init = async () => {
         options: {
             auth: false
         }
+
+    },
+    // unprotected endpoint for signout, note 'options:auth:false'
+    {
+        method: "GET",
+        path: "/signout",
+        handler: (request, h) => {
+            return h.redirect("/").unstate(config.OpenIdConfiguration.StateCookieName);
+        },
+        options: {
+            auth: false
+        }
     }
     ]);
 
