@@ -9,7 +9,7 @@
   "author": "jpda",
   "license": "MIT",
   "dependencies": {
-    "@hapi/hapi": "^18.4.0",
+    "@hapi/hapi": "^19.1.1",
     "openid-client": "^3.7.3",
     "uuid": "^3.3.3"
   }
